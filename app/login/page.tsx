@@ -43,7 +43,16 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-md p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-emerald-600">Klaaro</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#059669'}}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="3" width="3.5" height="18" rx="1.5" fill="white"/>
+                <line x1="7.5" y1="12" x2="20" y2="4" stroke="white" strokeWidth="3.2" strokeLinecap="round"/>
+                <line x1="7.5" y1="12" x2="20" y2="20" stroke="white" strokeWidth="3.2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-emerald-600">Klaaro</h1>
+          </div>
           <p className="text-gray-500 mt-1">Sign in to your account</p>
         </div>
 
