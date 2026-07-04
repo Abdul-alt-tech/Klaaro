@@ -22,7 +22,16 @@ export default function AgentLayout({
       <nav className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <h1 className="text-xl font-bold text-emerald-600">Klaaro</h1>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{backgroundColor: '#059669'}}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <rect x="4" y="3" width="3" height="14" rx="1" fill="white"/>
+                  <line x1="7" y1="10" x2="17" y2="3.5" stroke="white" strokeWidth="2.8" strokeLinecap="round"/>
+                  <line x1="7" y1="10" x2="17" y2="16.5" stroke="white" strokeWidth="2.8" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <span className="text-xl font-bold text-emerald-600">Klaaro</span>
+            </div>
             <div className="flex gap-6">
               <Link
                 href="/agent"
