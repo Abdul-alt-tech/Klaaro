@@ -34,7 +34,8 @@ export default function LoginPage() {
       .eq('id', data.user.id)
       .single()
 
-    if (profile?.role === 'agent') router.push('/agent')
+    if (data.user.id === process.env.NEXT_PUBLIC_SUPER_ADMIN_ID) router.push('/superadmin')
+    else if (profile?.role === 'agent') router.push('/agent')
     else if (profile?.role === 'admin') router.push('/admin')
     else router.push('/portal')
   }
