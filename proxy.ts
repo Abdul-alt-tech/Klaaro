@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+// Proxy file replaces the old `middleware.ts` convention. It protects routes
+// and ensures Supabase `getUser` calls time out gracefully instead of
+// hanging the request pipeline.
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -25,11 +28,32 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Try to fetch the user but fail fast after 3s so the middleware doesn't hang
+  // on slow Supabase responses. If the call times out or errors, treat as not
+  // authenticated and let the redirect logic handle it.
+  let user = null
+  try {
+    const getUserPromise = supabase.auth.getUser()
+    const res = await Promise.race([
+      getUserPromise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('supabase-getUser-timeout')), 3000)
+      ),
+    ])
+    // `res` should be { data: { user } } when successful
+    // Guard defensively in case of unexpected shape
+    // @ts-ignore
+    user = res?.data?.user ?? null
+  } catch (err) {
+    user = null
+  }
 
   // If not logged in and trying to access a protected page, redirect to login
-  if (!user && !request.nextUrl.pathname.startsWith('/login') &&
-      !request.nextUrl.pathname.startsWith('/signup')) {
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith('/login') &&
+    !request.nextUrl.pathname.startsWith('/signup')
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

@@ -51,43 +51,23 @@ export default function SuperAdminPage() {
     setSaving(true)
     setMessage('')
 
-    const { data, error } = await supabase
-      .from('organisations')
-      .insert({
+    const response = await fetch('/api/admin/create-organisation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: orgName.trim(),
         plan: orgPlan,
-        status: 'active',
-        contact_email: orgEmail.trim() || null
+        contactEmail: orgEmail.trim() || null
       })
-      .select()
-      .single()
+    })
 
-    if (error) {
-      setMessage('Error creating organisation: ' + error.message)
+    const result = await response.json()
+
+    if (!response.ok) {
+      setMessage('Error creating organisation: ' + result.error)
       setSaving(false)
       return
     }
-
-    // Seed default categories for the new organisation
-    await supabase.from('categories').insert([
-      { name: 'Account Access', department: 'IT', organisation_id: data.id },
-      { name: 'Network & Connectivity', department: 'IT', organisation_id: data.id },
-      { name: 'Hardware & Equipment', department: 'IT', organisation_id: data.id },
-      { name: 'Software & Applications', department: 'IT', organisation_id: data.id },
-      { name: 'Email & Communication', department: 'IT', organisation_id: data.id },
-      { name: 'HR Request', department: 'HR', organisation_id: data.id },
-      { name: 'Finance Request', department: 'Finance', organisation_id: data.id },
-      { name: 'Facilities', department: 'Facilities', organisation_id: data.id },
-      { name: 'Other', department: 'General', organisation_id: data.id },
-    ])
-
-    // Seed default SLA rules for the new organisation
-    await supabase.from('sla_rules').insert([
-      { priority: 'P1', response_time_minutes: 15, resolution_time_minutes: 240, organisation_id: data.id },
-      { priority: 'P2', response_time_minutes: 30, resolution_time_minutes: 480, organisation_id: data.id },
-      { priority: 'P3', response_time_minutes: 120, resolution_time_minutes: 1440, organisation_id: data.id },
-      { priority: 'P4', response_time_minutes: 240, resolution_time_minutes: 2880, organisation_id: data.id },
-    ])
 
     setMessage('Organisation created successfully with default categories and SLA rules.')
     setOrgName('')
