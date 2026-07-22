@@ -48,12 +48,21 @@ export async function proxy(request: NextRequest) {
     user = null
   }
 
-  // If not logged in and trying to access a protected page, redirect to login
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/signup')
-  ) {
+  const protectedPaths = [
+    '/portal',
+    '/agent',
+    '/admin',
+    '/superadmin',
+    '/dashboard',
+  ]
+
+  const isProtectedRoute = protectedPaths.some((path) =>
+    request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`)
+  )
+
+  // If not logged in and trying to access a protected page, redirect to login.
+  // Allow the root path `/` through so client-side hash redirect logic can run.
+  if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
