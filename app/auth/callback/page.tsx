@@ -1,92 +1,76 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
   const supabase = createClient()
+  const processed = useRef(false)
 
   useEffect(() => {
-    let handled = false
-    let fallbackTimer: ReturnType<typeof setTimeout> | undefined
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (processed.current) return
+        
+        if (event === 'SIGNED_IN' && session) {
+          processed.current = true
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, organisation_id')
+            .eq('id', session.user.id)
+            .single()
 
-    const handleSession = async (session: NonNullable<Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']>) => {
-      if (handled) return
-      handled = true
+          if (!profile || !profile.organisation_id) {
+            router.push('/accept-invite/setup')
+            return
+          }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-      if (!profile) {
-        router.push('/accept-invite/setup')
-        return
-      }
-
-      if (session.user.id === process.env.NEXT_PUBLIC_SUPER_ADMIN_ID) {
-        router.push('/superadmin')
-      } else if (profile.role === 'agent') {
-        router.push('/agent')
-      } else if (profile.role === 'admin') {
-        router.push('/admin')
-      } else if (profile.role === 'end_user') {
-        router.push('/portal')
-      } else {
-        router.push('/portal')
-      }
-    }
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setTimeout(() => {
-          void handleSession(session)
-        }, 0)
-      }
-    })
-
-    const handleCallback = async () => {
-      const code = new URLSearchParams(window.location.search).get('code')
-
-      if (code) {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-
-        if (!error && data.session) {
-          await handleSession(data.session)
-          return
+          if (session.user.id === process.env.NEXT_PUBLIC_SUPER_ADMIN_ID) {
+            router.push('/superadmin')
+          } else if (profile.role === 'agent') {
+            router.push('/agent')
+          } else if (profile.role === 'admin') {
+            router.push('/admin')
+          } else {
+            router.push('/portal')
+          }
         }
-      }
 
-      // Hash tokens are processed asynchronously by Supabase. Give the auth
-      // listener time to receive SIGNED_IN before using the session fallback.
-      fallbackTimer = setTimeout(async () => {
-        if (handled) return
-
-        const { data: { session } } = await supabase.auth.getSession()
-
-        if (session) {
-          await handleSession(session)
-        } else if (!handled) {
-          handled = true
+        if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
           router.push('/login')
         }
-      }, 1000)
-    }
+      }
+    )
 
-    void handleCallback()
+    // Fallback after 5 seconds if no auth event fires
+    const timeout = setTimeout(() => {
+      if (!processed.current) {
+        router.push('/login')
+      }
+    }, 5000)
 
     return () => {
-      if (fallbackTimer) clearTimeout(fallbackTimer)
-      authListener.subscription.unsubscribe()
+      subscription.unsubscribe()
+      clearTimeout(timeout)
     }
-  }, [router, supabase])
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-400">Setting up your account...</p>
+      <div className="text-center">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#059669' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <rect x="4" y="3" width="3.5" height="18" rx="1.5" fill="white"/>
+            <line x1="7.5" y1="12" x2="20" y2="4" stroke="white" strokeWidth="3.2" strokeLinecap="round"/>
+            <line x1="7.5" y1="12" x2="20" y2="20" stroke="white" strokeWidth="3.2" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <p className="text-gray-600 font-medium">Setting up your account...</p>
+        <p className="text-gray-400 text-sm mt-1">Please wait a moment</p>
+      </div>
     </div>
   )
 }
