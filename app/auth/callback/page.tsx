@@ -9,13 +9,12 @@ export default function AuthCallbackPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    const handleCallback = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    let handled = false
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined
 
-      if (!session) {
-        router.push('/login')
-        return
-      }
+    const handleSession = async (session: NonNullable<Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']>) => {
+      if (handled) return
+      handled = true
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -41,8 +40,49 @@ export default function AuthCallbackPage() {
       }
     }
 
-    handleCallback()
-  }, [])
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setTimeout(() => {
+          void handleSession(session)
+        }, 0)
+      }
+    })
+
+    const handleCallback = async () => {
+      const code = new URLSearchParams(window.location.search).get('code')
+
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+        if (!error && data.session) {
+          await handleSession(data.session)
+          return
+        }
+      }
+
+      // Hash tokens are processed asynchronously by Supabase. Give the auth
+      // listener time to receive SIGNED_IN before using the session fallback.
+      fallbackTimer = setTimeout(async () => {
+        if (handled) return
+
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session) {
+          await handleSession(session)
+        } else if (!handled) {
+          handled = true
+          router.push('/login')
+        }
+      }, 1000)
+    }
+
+    void handleCallback()
+
+    return () => {
+      if (fallbackTimer) clearTimeout(fallbackTimer)
+      authListener.subscription.unsubscribe()
+    }
+  }, [router, supabase])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
