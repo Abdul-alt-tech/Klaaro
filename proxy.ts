@@ -48,6 +48,13 @@ export async function proxy(request: NextRequest) {
     user = null
   }
 
+  const publicPaths = ['/login', '/signup', '/auth']
+
+  const isPublicRoute =
+    request.nextUrl.pathname === '/' || publicPaths.some((path) =>
+      request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`)
+    )
+
   const protectedPaths = [
     '/portal',
     '/agent',
@@ -59,6 +66,10 @@ export async function proxy(request: NextRequest) {
   const isProtectedRoute = protectedPaths.some((path) =>
     request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`)
   )
+
+  if (isPublicRoute) {
+    return supabaseResponse
+  }
 
   // If not logged in and trying to access a protected page, redirect to login.
   // Allow the root path `/` through so client-side hash redirect logic can run.
