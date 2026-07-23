@@ -10,6 +10,19 @@ export default function AuthCallbackPage() {
   const processed = useRef(false)
 
   useEffect(() => {
+    // Explicitly process the URL hash so Supabase detects the session
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+  
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+      }
+    }
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (processed.current) return
