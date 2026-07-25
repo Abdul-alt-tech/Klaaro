@@ -41,7 +41,6 @@ export default function NewRequestPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Step 1 — Call AI triage
     let aiCategory = 'Other'
     let aiPriority = 'P3'
 
@@ -49,9 +48,9 @@ export default function NewRequestPage() {
       const triageResponse = await fetch('/api/triage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title: title.trim(), 
-          description: description.trim() 
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim()
         })
       })
 
@@ -65,8 +64,12 @@ export default function NewRequestPage() {
       console.error('Triage failed:', e)
     }
 
-    // Step 2 — Insert ticket using the user selected categoryId
-    // AI suggestion stored separately for reference
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organisation_id')
+      .eq('id', user.id)
+      .single()
+
     const { error: insertError } = await supabase.from('tickets').insert({
       title: title.trim(),
       description: description.trim(),
@@ -77,6 +80,7 @@ export default function NewRequestPage() {
       priority: aiPriority,
       ai_suggested_category: aiCategory,
       ai_suggested_priority: aiPriority,
+      organisation_id: profile?.organisation_id,
     })
 
     if (insertError) {
@@ -98,7 +102,6 @@ export default function NewRequestPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
-        {/* Request type toggle */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Request type
@@ -127,7 +130,6 @@ export default function NewRequestPage() {
           </div>
         </div>
 
-        {/* Category */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Category
@@ -146,7 +148,6 @@ export default function NewRequestPage() {
           </select>
         </div>
 
-        {/* Title */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Title
@@ -160,7 +161,6 @@ export default function NewRequestPage() {
           />
         </div>
 
-        {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Description

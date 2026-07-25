@@ -68,19 +68,25 @@ export default function AgentTicketPage() {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
 
-    // If resolving, set resolved_at timestamp
     if (updates.status === 'resolved') {
       updates.resolved_at = new Date().toISOString()
     }
 
+    // Get organisation_id for audit log
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organisation_id')
+      .eq('id', user?.id)
+      .single()
+
     await supabase.from('tickets').update(updates).eq('id', id)
 
-    // Log to audit trail
     await supabase.from('audit_logs').insert({
       ticket_id: id,
       action: `Status updated to ${updates.status || updates.priority}`,
       performed_by: user?.id,
       new_value: JSON.stringify(updates),
+      organisation_id: profile?.organisation_id,
     })
 
     setTicket((prev) => prev ? { ...prev, ...updates } : prev)
@@ -92,6 +98,13 @@ export default function AgentTicketPage() {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
 
+    // Get organisation_id
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organisation_id')
+      .eq('id', user?.id)
+      .single()
+
     const { data } = await supabase
       .from('ticket_comments')
       .insert({
@@ -99,6 +112,7 @@ export default function AgentTicketPage() {
         author_id: user?.id,
         content: newComment.trim(),
         is_internal: isInternal,
+        organisation_id: profile?.organisation_id,
       })
       .select('*, profiles(full_name)')
       .single()
@@ -121,7 +135,6 @@ export default function AgentTicketPage() {
       </Link>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
-        {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -140,12 +153,10 @@ export default function AgentTicketPage() {
           </div>
         </div>
 
-        {/* Description */}
         <div className="bg-gray-50 rounded-xl p-4 mb-5">
           <p className="text-sm text-gray-700 leading-relaxed">{ticket.description}</p>
         </div>
 
-        {/* AI suggestion banner */}
         {ticket.ai_suggested_priority && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-5">
             <p className="text-xs font-medium text-emerald-700 mb-1">AI Triage Suggestion</p>
@@ -155,7 +166,6 @@ export default function AgentTicketPage() {
           </div>
         )}
 
-        {/* Controls */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
@@ -192,7 +202,6 @@ export default function AgentTicketPage() {
         )}
       </div>
 
-      {/* Comments section */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="font-semibold text-gray-900 mb-4">
           Notes & Updates
@@ -232,7 +241,6 @@ export default function AgentTicketPage() {
           </div>
         )}
 
-        {/* Add comment */}
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
