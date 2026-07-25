@@ -13,7 +13,7 @@ type Ticket = {
   created_at: string
   sla_breach_at: string | null
   submitted_by: string
-  profiles: { full_name: string }[] | null
+  submitted_by_name: string | null
   categories: { name: string } | null
 }
 
@@ -48,9 +48,8 @@ export default function AgentQueuePage() {
       let query = supabase
         .from('tickets')
         .select(`
-          id, title, type, status, priority, created_at, sla_breach_at, submitted_by,
-          profiles!tickets_submitted_by_fkey(full_name),
-          categories(name)
+          id, title, type, status, priority, created_at, sla_breach_at,
+          submitted_by, submitted_by_name, categories(name)
         `)
         .order('created_at', { ascending: false })
 
@@ -59,7 +58,7 @@ export default function AgentQueuePage() {
       }
 
       const { data } = await query
-      
+
       const normalized = (data || []).map((ticket) => ({
         ...ticket,
         categories: Array.isArray(ticket.categories)
@@ -67,7 +66,6 @@ export default function AgentQueuePage() {
           : ticket.categories,
       }))
 
-      // Sort by priority then date
       const sorted = normalized.sort((a, b) => {
         const pa = priorityOrder[a.priority || 'P4'] || 4
         const pb = priorityOrder[b.priority || 'P4'] || 4
@@ -89,7 +87,7 @@ export default function AgentQueuePage() {
   const isSlaWarning = (breachAt: string | null) => {
     if (!breachAt) return false
     const diff = new Date(breachAt).getTime() - new Date().getTime()
-    return diff > 0 && diff < 60 * 60 * 1000 // within 1 hour
+    return diff > 0 && diff < 60 * 60 * 1000
   }
 
   return (
@@ -102,7 +100,6 @@ export default function AgentQueuePage() {
           </p>
         </div>
 
-        {/* Status filter tabs */}
         <div className="flex gap-2">
           {['open', 'in_progress', 'resolved', 'all'].map((f) => (
             <button
@@ -162,7 +159,7 @@ export default function AgentQueuePage() {
                   <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
                   <p className="text-sm text-gray-500 mt-1">
                     {ticket.categories?.name || 'Uncategorised'} ·{' '}
-                    Submitted by {ticket.profiles?.[0]?.full_name || 'Unknown'} ·{' '}
+                    Submitted by {ticket.submitted_by_name || 'Unknown'} ·{' '}
                     {new Date(ticket.created_at).toLocaleDateString()}
                   </p>
                 </div>

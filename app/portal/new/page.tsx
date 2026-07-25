@@ -66,7 +66,7 @@ export default function NewRequestPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('organisation_id')
+      .select('organisation_id, full_name')
       .eq('id', user.id)
       .single()
 
@@ -76,6 +76,7 @@ export default function NewRequestPage() {
       type,
       category_id: categoryId,
       submitted_by: user.id,
+      submitted_by_name: profile?.full_name,
       status: 'open',
       priority: aiPriority,
       ai_suggested_category: aiCategory,
