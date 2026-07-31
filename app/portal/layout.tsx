@@ -47,6 +47,12 @@ export default function PortalLayout({
               >
                 Submit Request
               </Link>
+              <Link
+                href="/changes"
+                className="text-sm text-gray-600 hover:text-emerald-600 font-medium"
+              >
+                Changes
+              </Link>
             </div>
           </div>
           <button

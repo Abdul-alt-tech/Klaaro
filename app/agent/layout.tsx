@@ -45,6 +45,12 @@ export default function AgentLayout({
               >
                 Dashboard
               </Link>
+              <Link
+                href="/changes"
+                className="text-sm text-gray-600 hover:text-emerald-600 font-medium"
+              >
+                Changes
+              </Link>
             </div>
           </div>
           <div className="flex items-center gap-4">
