@@ -66,98 +66,138 @@ export default function ChangesPage() {
   }, [filter, supabase])
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Change Requests</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {changes.length} change request{changes.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <Link
-          href="/changes/new"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          + New Change Request
-        </Link>
-      </div>
-
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {['all', 'submitted', 'under_review', 'approved', 'implementing', 'closed', 'rejected'].map((f) => (
+    <div className="min-h-screen bg-gray-50">
+      {/* Nav bar */}
+      <nav className="bg-white border-b border-gray-200 px-6 py-4 mb-6">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#059669' }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <rect x="4" y="3" width="3" height="14" rx="1" fill="white" />
+                  <line x1="7" y1="10" x2="17" y2="3.5" stroke="white" strokeWidth="2.8" strokeLinecap="round" />
+                  <line x1="7" y1="10" x2="17" y2="16.5" stroke="white" strokeWidth="2.8" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span className="text-xl font-bold text-emerald-600">Klaaro</span>
+            </div>
+            <div className="flex gap-6">
+              <Link href="/portal" className="text-sm text-gray-600 hover:text-emerald-600 font-medium">
+                My Requests
+              </Link>
+              <Link href="/agent" className="text-sm text-gray-600 hover:text-emerald-600 font-medium">
+                Agent Queue
+              </Link>
+              <Link href="/changes" className="text-sm text-emerald-600 font-medium">
+                Changes
+              </Link>
+            </div>
+          </div>
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filter === f
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-400'
-            }`}
+            onClick={async () => {
+              const supabase = createClient()
+              await supabase.auth.signOut()
+              window.location.href = '/login'
+            }}
+            className="text-sm text-gray-500 hover:text-red-500"
           >
-            {f.replace('_', ' ')}
+            Sign out
           </button>
-        ))}
-      </div>
+        </div>
+      </nav>
 
-      {loading ? (
-        <p className="text-gray-400 py-20 text-center">Loading change requests...</p>
-      ) : changes.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-400 text-lg">No change requests found</p>
-          <p className="text-gray-400 text-sm mt-1">
-            Submit a change request to get started
-          </p>
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Change Requests</h2>
+            <p className="text-gray-500 text-sm mt-1">
+              {changes.length} change request{changes.length !== 1 ? 's' : ''}
+            </p>
+          </div>
           <Link
             href="/changes/new"
-            className="inline-block mt-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
-            New change request
+            + New Change Request
           </Link>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {changes.map((change) => (
-            <Link
-              key={change.id}
-              href={`/changes/${change.id}`}
-              className="block bg-white rounded-xl border border-gray-200 p-5 hover:border-emerald-300 hover:shadow-sm transition-all"
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {['all', 'submitted', 'under_review', 'approved', 'implementing', 'closed', 'rejected'].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${filter === f
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-400'
+                }`}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${typeColors[change.type]}`}>
-                      {change.type}
-                    </span>
-                    {change.type === 'emergency' && (
-                      <span className="text-xs bg-red-500 text-white font-medium px-2 py-0.5 rounded-full">
-                        Urgent
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-medium text-gray-900 truncate">{change.title}</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Submitted by {change.submitted_by_name || 'Unknown'} ·{' '}
-                    {new Date(change.created_at).toLocaleDateString()}
-                    {change.implementation_date && (
-                      <> · Planned {new Date(change.implementation_date).toLocaleDateString()}</>
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {change.priority && (
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${priorityColors[change.priority]}`}>
-                      {change.priority}
-                    </span>
-                  )}
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[change.status]}`}>
-                    {change.status.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-            </Link>
+              {f.replace('_', ' ')}
+            </button>
           ))}
         </div>
-      )}
+
+        {loading ? (
+          <p className="text-gray-400 py-20 text-center">Loading change requests...</p>
+        ) : changes.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+            <p className="text-gray-400 text-lg">No change requests found</p>
+            <p className="text-gray-400 text-sm mt-1">
+              Submit a change request to get started
+            </p>
+            <Link
+              href="/changes/new"
+              className="inline-block mt-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              New change request
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {changes.map((change) => (
+              <Link
+                key={change.id}
+                href={`/changes/${change.id}`}
+                className="block bg-white rounded-xl border border-gray-200 p-5 hover:border-emerald-300 hover:shadow-sm transition-all"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${typeColors[change.type]}`}>
+                        {change.type}
+                      </span>
+                      {change.type === 'emergency' && (
+                        <span className="text-xs bg-red-500 text-white font-medium px-2 py-0.5 rounded-full">
+                          Urgent
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-medium text-gray-900 truncate">{change.title}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Submitted by {change.submitted_by_name || 'Unknown'} ·{' '}
+                      {new Date(change.created_at).toLocaleDateString()}
+                      {change.implementation_date && (
+                        <> · Planned {new Date(change.implementation_date).toLocaleDateString()}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {change.priority && (
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${priorityColors[change.priority]}`}>
+                        {change.priority}
+                      </span>
+                    )}
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[change.status]}`}>
+                      {change.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
