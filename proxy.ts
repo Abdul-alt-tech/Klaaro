@@ -62,6 +62,7 @@ export async function proxy(request: NextRequest) {
     '/superadmin',
     '/dashboard',
     '/changes',
+    '/problems'
   ]
 
   const isProtectedRoute = protectedPaths.some((path) =>

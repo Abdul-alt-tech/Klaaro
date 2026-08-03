@@ -53,6 +53,12 @@ export default function PortalLayout({
               >
                 Changes
               </Link>
+              <Link
+                href="/problems"
+                className="text-sm text-gray-600 hover:text-emerald-600 font-medium"
+              >
+                Problems
+              </Link>
             </div>
           </div>
           <button
