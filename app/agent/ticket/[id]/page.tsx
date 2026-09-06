@@ -80,7 +80,13 @@ export default function AgentTicketPage() {
       .eq('id', user?.id)
       .single()
 
-    await supabase.from('tickets').update(updates).eq('id', id)
+    const { error: updateError } = await supabase.from('tickets').update(updates).eq('id', id)
+
+    if (updateError) {
+      console.error('Ticket update failed:', updateError)
+      setSaving(false)
+      return
+    }
 
     await supabase.from('audit_logs').insert({
       ticket_id: id,
