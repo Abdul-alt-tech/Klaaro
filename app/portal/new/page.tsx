@@ -70,24 +70,45 @@ export default function NewRequestPage() {
       .eq('id', user.id)
       .single()
 
-    const { error: insertError } = await supabase.from('tickets').insert({
-      title: title.trim(),
-      description: description.trim(),
-      type,
-      category_id: categoryId,
-      submitted_by: user.id,
-      submitted_by_name: profile?.full_name,
-      status: 'open',
-      priority: aiPriority,
-      ai_suggested_category: aiCategory,
-      ai_suggested_priority: aiPriority,
-      organisation_id: profile?.organisation_id,
-    })
+    const { data: insertedTicket, error: insertError } = await supabase
+      .from('tickets')
+      .insert({
+        title: title.trim(),
+        description: description.trim(),
+        type,
+        category_id: categoryId,
+        submitted_by: user.id,
+        submitted_by_name: profile?.full_name,
+        status: 'open',
+        priority: aiPriority,
+        ai_suggested_category: aiCategory,
+        ai_suggested_priority: aiPriority,
+        organisation_id: profile?.organisation_id,
+      })
+      .select()
+      .single()
 
     if (insertError) {
       setError(insertError.message)
       setLoading(false)
       return
+    }
+
+    try {
+      await fetch('/api/notifications/new-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: insertedTicket.id,
+          ticketTitle: insertedTicket.title,
+          category: categories.find((category) => category.id === categoryId)?.name || 'Unknown',
+          priority: aiPriority,
+          submittedByName: profile?.full_name || 'Unknown',
+          organisationId: profile?.organisation_id,
+        }),
+      })
+    } catch (e) {
+      console.error('Failed to send new ticket notification:', e)
     }
 
     router.push('/portal')

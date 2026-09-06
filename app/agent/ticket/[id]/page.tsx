@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 
 type Ticket = {
   id: string
+  submitted_by: string
   title: string
   description: string
   type: string
@@ -88,6 +89,23 @@ export default function AgentTicketPage() {
       new_value: JSON.stringify(updates),
       organisation_id: profile?.organisation_id,
     })
+
+    if (updates.status && ticket?.submitted_by) {
+      try {
+        await fetch('/api/notifications/status-changed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            submittedById: ticket.submitted_by,
+            recipientName: ticket.profiles?.[0]?.full_name || 'there',
+            ticketTitle: ticket.title,
+            newStatus: updates.status,
+          }),
+        })
+      } catch (e) {
+        console.error('Failed to send status change notification:', e)
+      }
+    }
 
     setTicket((prev) => prev ? { ...prev, ...updates } : prev)
     setSaving(false)
