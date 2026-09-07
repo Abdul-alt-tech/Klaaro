@@ -1,36 +1,33 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [sessionReady, setSessionReady] = useState(false)
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   useEffect(() => {
     const verifyRecoveryLink = async () => {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      const accessToken = hashParams.get('access_token')
-      const refreshToken = hashParams.get('refresh_token')
+      const code = searchParams.get('code')
 
-      if (!accessToken || !refreshToken) {
+      if (!code) {
         setError('This reset link is invalid or expired.')
         return
       }
 
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      })
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
-      if (sessionError) {
-        setError(sessionError.message)
+      if (exchangeError) {
+        setError(exchangeError.message)
         return
       }
 
@@ -38,7 +35,7 @@ export default function ResetPasswordPage() {
     }
 
     verifyRecoveryLink()
-  }, [])
+  }, [searchParams])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -152,5 +149,19 @@ export default function ResetPasswordPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
