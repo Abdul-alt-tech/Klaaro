@@ -12,11 +12,6 @@ export default function RootPage() {
     const handleRedirect = async () => {
       const hash = window.location.hash
 
-      if (hash && hash.includes('type=recovery')) {
-        router.push(`/reset-password${hash}`)
-        return
-      }
-
       if (hash && hash.includes('access_token')) {
         const { data: { session } } = await supabase.auth.getSession()
 

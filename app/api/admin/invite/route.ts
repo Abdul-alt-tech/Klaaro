@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Send the invite email using Supabase Auth
     const { error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: 'https://klaaro-ashy.vercel.app/auth/callback',
+      redirectTo: 'https://klaaro-ashy.vercel.app/auth/confirm?next=/accept-invite/setup',
       data: {
         full_name: fullName,
         role,

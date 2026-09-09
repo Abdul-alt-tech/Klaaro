@@ -2,7 +2,6 @@
 
 import { FormEvent, Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 function ResetPasswordForm() {
@@ -12,30 +11,22 @@ function ResetPasswordForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [sessionReady, setSessionReady] = useState(false)
-  const searchParams = useSearchParams()
   const supabase = createClient()
 
   useEffect(() => {
-    const verifyRecoveryLink = async () => {
-      const code = searchParams.get('code')
+    const verifySession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!code) {
+      if (!session) {
         setError('This reset link is invalid or expired.')
-        return
-      }
-
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-
-      if (exchangeError) {
-        setError(exchangeError.message)
         return
       }
 
       setSessionReady(true)
     }
 
-    verifyRecoveryLink()
-  }, [searchParams])
+    verifySession()
+  }, [])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
