@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -41,43 +41,63 @@ export default function AgentQueuePage() {
   const [filter, setFilter] = useState('open')
   const supabase = createClient()
 
-  useEffect(() => {
-    const fetchTickets = async () => {
-      setLoading(true)
+  const fetchTickets = useCallback(async (currentFilter: string) => {
+    let query = supabase
+      .from('tickets')
+      .select(`
+        id, title, type, status, priority, created_at, sla_breach_at,
+        submitted_by, submitted_by_name, categories(name)
+      `)
+      .order('created_at', { ascending: false })
 
-      let query = supabase
-        .from('tickets')
-        .select(`
-          id, title, type, status, priority, created_at, sla_breach_at,
-          submitted_by, submitted_by_name, categories(name)
-        `)
-        .order('created_at', { ascending: false })
-
-      if (filter !== 'all') {
-        query = query.eq('status', filter)
-      }
-
-      const { data } = await query
-
-      const normalized = (data || []).map((ticket) => ({
-        ...ticket,
-        categories: Array.isArray(ticket.categories)
-          ? ticket.categories[0] ?? null
-          : ticket.categories,
-      }))
-
-      const sorted = normalized.sort((a, b) => {
-        const pa = priorityOrder[a.priority || 'P4'] || 4
-        const pb = priorityOrder[b.priority || 'P4'] || 4
-        return pa - pb
-      })
-
-      setTickets(sorted)
-      setLoading(false)
+    if (currentFilter !== 'all') {
+      query = query.eq('status', currentFilter)
     }
 
-    fetchTickets()
-  }, [filter, supabase])
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Failed to fetch tickets:', error)
+      return
+    }
+
+    const normalized = (data || []).map((ticket) => ({
+      ...ticket,
+      categories: Array.isArray(ticket.categories)
+        ? ticket.categories[0] ?? null
+        : ticket.categories,
+    }))
+
+    const sorted = normalized.sort((a, b) => {
+      const pa = priorityOrder[a.priority || 'P4'] || 4
+      const pb = priorityOrder[b.priority || 'P4'] || 4
+      return pa - pb
+    })
+
+    setTickets(sorted)
+  }, [supabase])
+
+  useEffect(() => {
+    setLoading(true)
+    fetchTickets(filter).finally(() => setLoading(false))
+  }, [filter, fetchTickets])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('tickets-queue-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        () => {
+          fetchTickets(filter)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [filter, fetchTickets, supabase])
 
   const isSlaBreached = (breachAt: string | null) => {
     if (!breachAt) return false
