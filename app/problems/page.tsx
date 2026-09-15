@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ProblemsNav from '@/components/ProblemsNav'
@@ -35,26 +35,47 @@ export default function ProblemsPage() {
   const [filter, setFilter] = useState('all')
   const supabase = createClient()
 
-  useEffect(() => {
-    const fetchProblems = async () => {
-      setLoading(true)
+  const fetchProblems = useCallback(async (currentFilter: string) => {
+    let query = supabase
+      .from('problems')
+      .select('id, title, status, priority, submitted_by_name, workaround, created_at')
+      .order('created_at', { ascending: false })
 
-      let query = supabase
-        .from('problems')
-        .select('id, title, status, priority, submitted_by_name, workaround, created_at')
-        .order('created_at', { ascending: false })
-
-      if (filter !== 'all') {
-        query = query.eq('status', filter)
-      }
-
-      const { data } = await query
-      setProblems(data || [])
-      setLoading(false)
+    if (currentFilter !== 'all') {
+      query = query.eq('status', currentFilter)
     }
 
-    fetchProblems()
-  }, [filter, supabase])
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Failed to fetch problems:', error)
+      return
+    }
+
+    setProblems(data || [])
+  }, [supabase])
+
+  useEffect(() => {
+    setLoading(true)
+    fetchProblems(filter).finally(() => setLoading(false))
+  }, [filter, fetchProblems])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('problems-list-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'problems' },
+        () => {
+          fetchProblems(filter)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [filter, fetchProblems, supabase])
 
   return (
     <div className="min-h-screen bg-gray-50">

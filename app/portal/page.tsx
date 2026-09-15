@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 type Ticket = {
@@ -33,30 +33,52 @@ export default function PortalPage() {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  useEffect(() => {
-    const fetchTickets = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+  const fetchTickets = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
 
-      const { data } = await supabase
-        .from('tickets')
-        .select('id, title, type, status, priority, created_at, categories(name)')
-        .eq('submitted_by', user.id)
-        .order('created_at', { ascending: false })
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('id, title, type, status, priority, created_at, categories(name)')
+      .eq('submitted_by', user.id)
+      .order('created_at', { ascending: false })
 
-      const normalized = (data || []).map((ticket) => ({
-        ...ticket,
-        categories: Array.isArray(ticket.categories)
-          ? ticket.categories[0] ?? null
-          : ticket.categories,
-      }))
-
-      setTickets(normalized)
-      setLoading(false)
+    if (error) {
+      console.error('Failed to fetch tickets:', error)
+      return
     }
 
-    fetchTickets()
+    const normalized = (data || []).map((ticket) => ({
+      ...ticket,
+      categories: Array.isArray(ticket.categories)
+        ? ticket.categories[0] ?? null
+        : ticket.categories,
+    }))
+
+    setTickets(normalized)
   }, [supabase])
+
+  useEffect(() => {
+    setLoading(true)
+    fetchTickets().finally(() => setLoading(false))
+  }, [fetchTickets])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('portal-requests-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        () => {
+          fetchTickets()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchTickets, supabase])
 
   if (loading) {
     return (

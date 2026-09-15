@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -44,26 +44,47 @@ export default function ChangesPage() {
   const [filter, setFilter] = useState('all')
   const supabase = createClient()
 
-  useEffect(() => {
-    const fetchChanges = async () => {
-      setLoading(true)
+  const fetchChanges = useCallback(async (currentFilter: string) => {
+    let query = supabase
+      .from('change_requests')
+      .select('id, title, type, status, priority, submitted_by_name, implementation_date, created_at')
+      .order('created_at', { ascending: false })
 
-      let query = supabase
-        .from('change_requests')
-        .select('id, title, type, status, priority, submitted_by_name, implementation_date, created_at')
-        .order('created_at', { ascending: false })
-
-      if (filter !== 'all') {
-        query = query.eq('status', filter)
-      }
-
-      const { data } = await query
-      setChanges(data || [])
-      setLoading(false)
+    if (currentFilter !== 'all') {
+      query = query.eq('status', currentFilter)
     }
 
-    fetchChanges()
-  }, [filter, supabase])
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Failed to fetch change requests:', error)
+      return
+    }
+
+    setChanges(data || [])
+  }, [supabase])
+
+  useEffect(() => {
+    setLoading(true)
+    fetchChanges(filter).finally(() => setLoading(false))
+  }, [filter, fetchChanges])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('changes-list-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'change_requests' },
+        () => {
+          fetchChanges(filter)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [filter, fetchChanges, supabase])
 
   return (
     <div className="min-h-screen bg-gray-50">
