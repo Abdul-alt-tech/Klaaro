@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 type Ticket = {
   id: string
   submitted_by: string
+  submitted_by_name: string | null
   title: string
   description: string
   type: string
@@ -181,8 +182,7 @@ export default function AgentTicketPage() {
             </div>
             <h2 className="text-xl font-bold text-gray-900">{ticket.title}</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Submitted by {ticket.profiles?.[0]?.full_name || 'Unknown'}
-              {ticket.profiles?.[0]?.department ? ` · ${ticket.profiles[0].department}` : ''} ·{' '}
+              Submitted by {ticket.submitted_by_name || 'Unknown'} ·{' '}
               {new Date(ticket.created_at).toLocaleDateString()}
             </p>
           </div>
