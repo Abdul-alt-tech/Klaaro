@@ -71,7 +71,9 @@ export default function AgentQueuePage() {
     const sorted = normalized.sort((a, b) => {
       const pa = priorityOrder[a.priority || 'P4'] || 4
       const pb = priorityOrder[b.priority || 'P4'] || 4
-      return pa - pb
+      if (pa !== pb) return pa - pb
+      // Same priority: first-come-first-served, oldest first
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     })
 
     setTickets(sorted)
