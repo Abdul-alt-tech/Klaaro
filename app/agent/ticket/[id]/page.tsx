@@ -80,10 +80,21 @@ export default function AgentTicketPage() {
       .eq('id', user?.id)
       .single()
 
-    const { error: updateError } = await supabase.from('tickets').update(updates).eq('id', id)
+    const { data: updatedRows, error: updateError } = await supabase
+      .from('tickets')
+      .update(updates)
+      .eq('id', id)
+      .select()
 
     if (updateError) {
       console.error('Ticket update failed:', updateError)
+      setSaving(false)
+      return
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      console.error('Ticket update affected 0 rows — likely blocked by a permissions check or an expired session. Try signing out and back in.')
+      alert('Update failed to save — your session may have expired. Please sign out and back in, then try again.')
       setSaving(false)
       return
     }
